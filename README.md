@@ -21,11 +21,15 @@ https://www.youtube.com/@DevsuperiorJavaSpring
 | Dia / horário  | Conteúdo |
 | ------------- | ------------- |
 | Segunda-feira 20h30 | Aula 1: Projeto estruturado |
-| Terça-feira 20h30  | Aula 2: Modelo de domínio |
-| Quarta-feira 20h30 | Aula 3: Deploy e caso de uso |
+| Terça-feira 20h30  | Aula 2: Domínio e consultas |
+| Quarta-feira 20h30 | Aula 3: Deploy e CORS |
 | Quinta-feira 20h30 | Aula 4: Endpoint especial |
 | Sexta-feira 20h30 | Aula 5: Resumão e reforço do aprendizado |
 | Domingo 16h00 | Oficina: Avançando na modelagem de dados  |
+
+## Modelo de domínio DSList
+
+![Modelo de domínio DSList](https://raw.githubusercontent.com/devsuperior/java-spring-dslist/main/resources/dslist-model.png)
 
 ## Trechos de código
 
@@ -65,6 +69,39 @@ spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
 ```
 
+### application-dev.properties
+
+```
+#spring.jpa.properties.jakarta.persistence.schema-generation.create-source=metadata
+#spring.jpa.properties.jakarta.persistence.schema-generation.scripts.action=create
+#spring.jpa.properties.jakarta.persistence.schema-generation.scripts.create-target=create.sql
+#spring.jpa.properties.hibernate.hbm2ddl.delimiter=;
+
+spring.datasource.url=jdbc:postgresql://localhost:5432/dscatalog
+spring.datasource.username=postgres
+spring.datasource.password=1234567
+
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
+spring.jpa.hibernate.ddl-auto=none
+```
+
+### application-prod.properties
+```
+spring.datasource.url=${DB_URL}
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
+
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
+spring.jpa.hibernate.ddl-auto=none
+```
+
+### system.properties
+```
+java.runtime.version=17
+```
+
 ### WebConfig
 
 ```java
@@ -87,19 +124,23 @@ public class WebConfig {
 }
 ```
 
-### GameListRepository
+### GameRepository
 
 ```java
 @Query(nativeQuery = true, value = """
-	SELECT tb_game.id, tb_game.title, tb_game.game_year AS `year`, tb_game.img_url AS imgUrl, 
-	tb_game.short_description AS shortDescription, tb_belonging.position
-	FROM tb_game
-	INNER JOIN tb_belonging ON tb_game.id = tb_belonging.game_id
-	WHERE tb_belonging.list_id = :listId
-	ORDER BY tb_belonging.position
-		""")
-List<GameMinProjection> searchGameList(Long listId);
+		SELECT tb_game.id, tb_game.title, tb_game.game_year AS `year`, tb_game.img_url AS imgUrl,
+		tb_game.short_description AS shortDescription, tb_belonging.position
+		FROM tb_game
+		INNER JOIN tb_belonging ON tb_game.id = tb_belonging.game_id
+		WHERE tb_belonging.list_id = :listId
+		ORDER BY tb_belonging.position
+			""")
+List<GameMinProjection> searchByList(Long listId);
+```
 
+### GameListRepository
+
+```java
 @Modifying
 @Query(nativeQuery = true, value = "UPDATE tb_belonging SET position = :newPosition WHERE list_id = :listId AND game_id = :gameId")
 void updateBelongingPosition(Long listId, Long gameId, Integer newPosition);
@@ -134,3 +175,7 @@ INSERT INTO tb_belonging (list_id, game_id, position) VALUES (2, 8, 2);
 INSERT INTO tb_belonging (list_id, game_id, position) VALUES (2, 9, 3);
 INSERT INTO tb_belonging (list_id, game_id, position) VALUES (2, 10, 4);
 ```
+
+### Script Docker Compose
+
+https://gist.github.com/acenelio/5e40b27cfc40151e36beec1e27c4ff71
